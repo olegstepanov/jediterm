@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '1.0.3'
+    ext.kotlin_version = '1.2.51'
     repositories {
         mavenCentral()
     }
@@ -9,8 +9,8 @@ buildscript {
 }
 
 plugins {
-    id "edu.sc.seis.macAppBundle" version "2.1.6"
-    id 'edu.sc.seis.launch4j' version '1.6.2'
+    id "edu.sc.seis.macAppBundle" version "2.2.1"
+    id 'edu.sc.seis.launch4j' version '2.4.4'
 }
 
 apply plugin: 'application'
@@ -24,11 +24,13 @@ repositories {
 }
 
 sourceSets {
-    main.java.srcDirs += 'src/main/kotlin'
+    main.java.srcDirs += 'src/main/java'
+    main.kotlin.srcDirs += 'src/main/kotlin'
 }
 
 dependencies {
     compile project(':pty')
+
     compile ":eawtstub:"
 
     runtime files('../pty/libs') //TODO: add only suitable libs for each platform

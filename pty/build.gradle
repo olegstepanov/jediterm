@@ -1,13 +1,18 @@
 apply plugin: 'java'
 apply plugin: 'application'
+apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.bintray'
 
-sourceSets.main.java.srcDirs = ['src', '../terminal/src']
+
+sourceSets.main.java.srcDirs = ['src']
 
 repositories {
     flatDir dirs: ['libs']
 }
 
 dependencies {
+    compile project(':terminal')
+
     compile ':log4j:1.2.14'
     compile ':annotations'
     compile ':guava:14.0.1'
@@ -20,20 +25,36 @@ dependencies {
     testCompile ':junit:4.10'
 }
 
+archivesBaseName = "jediterm-pty"
+
 mainClassName = 'com.jediterm.pty.PtyMain'
 
 
-jar {
-    baseName "jediterm-pty"
+group 'org.jetbrains'
+version rootProject.ext.projectVersion
+
+
+task mainJar(type: Jar) {
+    baseName = "jediterm-pty"
 
     manifest {
         attributes 'Main-Class': mainClassName
     }
+    from sourceSets.main.output
+
+    from fileTree(dir: '../.gradleBuild/terminal/classes/java/main') // find a better way to include classes into jar
 }
 
+jar {
+    baseName = "jediterm-pty"
+
+    manifest {
+        attributes 'Main-Class': mainClassName
+    }
+    from sourceSets.main.output
+}
 
 task sourcesJar(type: Jar, dependsOn: classes) {
-    classifier = 'sources'
     baseName "jediterm-pty"
     classifier "src"
     from sourceSets.main.allSource
@@ -41,6 +62,67 @@ task sourcesJar(type: Jar, dependsOn: classes) {
 
 artifacts {
     archives sourcesJar
+    archives mainJar
 }
 
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId archivesBaseName
+            artifact mainJar
+            artifact sourcesJar {
+                classifier 'sources'
+            }
+            pom.withXml {
+                asNode().children().last() + {
+                    resolveStrategy = DELEGATE_FIRST
+                    name 'JediTerm'
+                    description 'Pure Java Terminal Emulator. Works with SSH and PTY.'
+                    url 'https://github.com/JetBrains/jediterm'
+                    scm {
+                        connection 'scm:git:git://github.com/JetBrains/jediterm.git'
+                        developerConnection 'scm:git:ssh:github.com/JetBrains/jediterm.git'
+                        url 'https://github.com/JetBrains/jediterm'
+                    }
+                    licenses {
+                        license {
+                            name 'LGPL 3.0'
+                            url 'https://www.gnu.org/licenses/lgpl.txt'
+                        }
+                    }
+                    developers {
+                        developer {
+                            id 'JetBrains'
+                            name 'JetBrains Team'
+                            organization 'JetBrains'
+                            organizationUrl 'https://www.jetbrains.com'
+                            email 'dmitry.trofimov@jetbrains.com'
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
+if (System.getenv('BINTRAY_USER') != null) {
+    bintray {
+        user = System.getenv('BINTRAY_USER')
+        key = System.getenv('BINTRAY_KEY')
+        publish = true
+        publications = ['mavenJava']
+
+
+        pkg {
+            repo = 'jediterm'
+            name = 'org.jetbrains:jediterm'
+            userOrg = 'jetbrains'
+            licenses = ['LGPL-3.0']
+            vcsUrl = 'https://github.com/JetBrains/jediterm.git'
+
+            version {
+                name = rootProject.ext.projectVersion
+            }
+        }
+    }
+}
